@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -23,23 +24,13 @@ class CrimeListFragment : Fragment() {
     private lateinit var crimeRecyclerView: RecyclerView
 
     // Reference to the CrimeAdapter inner class
-    private var adapter: CrimeAdapter? = null
+    private var adapter: CrimeAdapter = CrimeAdapter(emptyList())
 
     // Instantiate crimeListViewModel upon first access using the "lazy" delegated property.
     // The ViewModelProvider instantiates the CrimeListViewModel
     // and configures its lifecycle management.
     private val crimeListViewModel: CrimeListViewModel by lazy {
         ViewModelProvider(this).get(CrimeListViewModel::class.java)
-    }
-
-    /**
-     * Called to do initial creation of a fragment. This is called after
-     * {@link #onAttach(Activity)} and before
-     * {@link #onCreateView(LayoutInflater, ViewGroup, Bundle)}.
-     */
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        Log.d(TAG, "Total crimes: ${crimeListViewModel.crimes.size}")
     }
 
     /**
@@ -59,10 +50,30 @@ class CrimeListFragment : Fragment() {
         // and configure it's LayoutManager which by default arranges items vertically
         crimeRecyclerView = view.findViewById(R.id.crime_recycler_view) as RecyclerView
         crimeRecyclerView.layoutManager = LinearLayoutManager(context)
-
-        updateUI()
+        crimeRecyclerView.adapter = adapter
 
         return view
+    }
+
+    /**
+     * Called immediately after {@link #onCreateView(LayoutInflater, ViewGroup, Bundle)}
+     * has returned, signaling that the fragment’s view hierarchy is in place.
+     * This ensures that any views are ready to display the crime data.
+     */
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        // Register an Observer on the crimeListViewModel.crimeListLiveData LiveData instance.
+        // The LiveData instance will unregister the Observer as long as the lifetime of the
+        // viewLifecycleOwner (i.e. the Fragment's view) is no longer in a valid state.
+        crimeListViewModel.crimeListLiveData.observe(
+            viewLifecycleOwner,
+            Observer { crimes ->
+                crimes?.let {
+                    Log.i(TAG, "Got crimes ${crimes.size}")
+                    updateUI(crimes)
+                }
+            }
+        )
     }
 
     /**
@@ -70,8 +81,7 @@ class CrimeListFragment : Fragment() {
      * stored in the crimeListViewModel. The CrimeAdapter is then used
      * as adapter of the RecyclerView of the fragment_crime_list.xml.
      */
-    private fun updateUI() {
-        val crimes = crimeListViewModel.crimes
+    private fun updateUI(crimes: List<Crime>) {
         adapter = CrimeAdapter(crimes)
         crimeRecyclerView.adapter = adapter
     }
