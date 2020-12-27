@@ -1,6 +1,7 @@
 package com.example.criminalintent
 
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -90,6 +91,8 @@ class CrimeListFragment : Fragment() {
         private val dateTextView: TextView = itemView.findViewById(R.id.crime_date)
         private val solvedImageView: ImageView = itemView.findViewById(R.id.crime_solved)
 
+        private val mediumDateFormat = DateFormat.getMediumDateFormat(context)
+
         init {
             // The CrimeHolder holds the view it is responsible for in the property "itemView".
             // The CrimeHolder registers itself as OnClickListener of this itemView.
@@ -102,7 +105,7 @@ class CrimeListFragment : Fragment() {
         fun bind(crime: Crime) {
             this.crime = crime
             titleTextView.text = this.crime.title
-            dateTextView.text = this.crime.date.toString()
+            dateTextView.text = mediumDateFormat.format(this.crime.date)
             solvedImageView.visibility = if (crime.isSolved) {
                 View.VISIBLE
             } else {
