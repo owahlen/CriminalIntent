@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -80,12 +81,14 @@ class CrimeListFragment : Fragment() {
      * They hold the reference to the inflated list_item_crime and also provide the
      * reference to the contained TextViews.
      */
-    private inner class CrimeHolder(view: View): RecyclerView.ViewHolder(view), View.OnClickListener {
+    private inner class CrimeHolder(view: View) : RecyclerView.ViewHolder(view),
+        View.OnClickListener {
 
         private lateinit var crime: Crime
 
         private val titleTextView: TextView = itemView.findViewById(R.id.crime_title)
         private val dateTextView: TextView = itemView.findViewById(R.id.crime_date)
+        private val solvedImageView: ImageView = itemView.findViewById(R.id.crime_solved)
 
         init {
             // The CrimeHolder holds the view it is responsible for in the property "itemView".
@@ -100,6 +103,11 @@ class CrimeListFragment : Fragment() {
             this.crime = crime
             titleTextView.text = this.crime.title
             dateTextView.text = this.crime.date.toString()
+            solvedImageView.visibility = if (crime.isSolved) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
         }
 
         override fun onClick(v: View?) {
@@ -114,7 +122,8 @@ class CrimeListFragment : Fragment() {
      * view and holds a reference to it. It also binds the crime model (title and date) to
      * the TextViews of the list_item_crime.
      */
-    private inner class CrimeAdapter(var crimes: List<Crime>): RecyclerView.Adapter<CrimeHolder>() {
+    private inner class CrimeAdapter(var crimes: List<Crime>) :
+        RecyclerView.Adapter<CrimeHolder>() {
 
         // For the visible items (and some more backup items) managed by the CrimeAdapter
         // the RecyclerView will call onCreateViewHolder to inflate the list_item_crime view
