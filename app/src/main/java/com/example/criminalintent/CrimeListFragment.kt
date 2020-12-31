@@ -1,5 +1,6 @@
 package com.example.criminalintent
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -7,17 +8,28 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.util.*
 
-class CrimeListFragment : Fragment() {
+class CrimeListFragment private constructor() : Fragment() {
 
     // TAG for logging
     private val TAG = javaClass.simpleName
+
+    // Interface to be implemented by any hosting activity (e.g. MainActivity).
+    // Its implementation enforces that MainActivity implements a behavior for
+    // the case when a Crime is selected in the list.
+    interface Callbacks {
+        fun onCrimeSelected(crimeId: UUID)
+    }
+
+    // callbacks is set/unset in onAttach()/onDetach() of this CrimeListFragment()
+    // to the hosting MainActivity.
+    private var callbacks: Callbacks? = null
 
     // Reference to the crimeRecyclerView that is part of the fragment_crime_list.xml
     // The RecyclerView provides a limited window into a large data set.
@@ -31,6 +43,16 @@ class CrimeListFragment : Fragment() {
     // and configures its lifecycle management.
     private val crimeListViewModel: CrimeListViewModel by lazy {
         ViewModelProvider(this).get(CrimeListViewModel::class.java)
+    }
+
+    /**
+     * Called when the fragment is first attached to the MainActivity.
+     * Since CrimeListFragment is hosted in an activity, the Context parameter
+     * is the activity instance hosting the fragment.
+     */
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        callbacks = context as Callbacks?
     }
 
     /**
@@ -74,6 +96,14 @@ class CrimeListFragment : Fragment() {
                 }
             }
         )
+    }
+
+    /**
+     * Called when the fragment is no longer attached to the MainActivity.
+     */
+    override fun onDetach() {
+        super.onDetach()
+        callbacks = null
     }
 
     /**
@@ -121,7 +151,8 @@ class CrimeListFragment : Fragment() {
         }
 
         override fun onClick(v: View?) {
-            Toast.makeText(context, "${crime.title} pressed!", Toast.LENGTH_SHORT).show()
+            // call onCrimeSelected() in the hosting MainActivity
+            callbacks?.onCrimeSelected(crime.id)
         }
     }
 

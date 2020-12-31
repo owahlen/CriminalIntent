@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.room.Room
 import com.example.criminalintent.database.CrimeDatabase
 import java.util.*
+import java.util.concurrent.Executors
 
 private const val DATABASE_NAME = "crime-database"
 
@@ -24,10 +25,27 @@ class CrimeRepository private constructor(context: Context) {
     // the CrimeRepository adapts the access methods of the Dao
     private val crimeDao = database.crimeDao()
 
+    // executor for creates and updates to run in a separate thread
+    private val executor = Executors.newSingleThreadExecutor()
+
     // Repository operations
     fun getCrimes(): LiveData<List<Crime>> = crimeDao.getCrimes()
 
     fun getCrime(id: UUID): LiveData<Crime?> = crimeDao.getCrime(id)
+
+    fun updateCrime(crime: Crime) {
+        // push the DAO operations off the main thread to not block the UI
+        executor.execute {
+            crimeDao.updateCrime(crime)
+        }
+    }
+
+    fun addCrime(crime: Crime) {
+        // push the DAO operations off the main thread to not block the UI
+        executor.execute {
+            crimeDao.addCrime(crime)
+        }
+    }
 
     // companion to instantiate this class as a singleton
     companion object {
