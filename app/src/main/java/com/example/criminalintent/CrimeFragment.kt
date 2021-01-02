@@ -14,8 +14,10 @@ import androidx.lifecycle.ViewModelProvider
 import java.util.*
 
 private const val ARG_CRIME_ID = "crime_id"
+private const val DIALOG_DATE = "DialogDate"
+private const val REQUEST_DATE = 0
 
-class CrimeFragment private constructor() : Fragment() {
+class CrimeFragment private constructor() : Fragment(), DatePickerFragment.Callbacks {
 
     // TAG for logging
     private val TAG = javaClass.simpleName
@@ -24,6 +26,7 @@ class CrimeFragment private constructor() : Fragment() {
     private lateinit var titleField: EditText
     private lateinit var dateButton: Button
     private lateinit var solvedCheckBox: CheckBox
+
     // Lazy initialization of the crimeDetailViewModel associated with this CrimeFragment
     private val crimeDetailViewModel: CrimeDetailViewModel by lazy {
         ViewModelProvider(this).get(CrimeDetailViewModel::class.java)
@@ -62,11 +65,6 @@ class CrimeFragment private constructor() : Fragment() {
         titleField = view.findViewById(R.id.crime_title) as EditText
         dateButton = view.findViewById(R.id.crime_date) as Button
         solvedCheckBox = view.findViewById(R.id.crime_solved) as CheckBox
-
-        dateButton.apply {
-            text = crime.date.toString()
-            isEnabled = false
-        }
 
         return view
     }
@@ -133,6 +131,18 @@ class CrimeFragment private constructor() : Fragment() {
                 crime.isSolved = isChecked
             }
         }
+
+        // When the dateButton is clicked show the DatePickerFragment
+        dateButton.setOnClickListener {
+            // Populate the DatePickerFragment with the current crime.date using
+            // the FragmentManager of the CrimeFragment.
+            // Set this CrimeFragment as a target in order to receive the adjusted date back.
+            // The DatePickerFragment with call the "onDateSelected" callback on this target.
+            DatePickerFragment.newInstance(crime.date).apply {
+                setTargetFragment(this@CrimeFragment, REQUEST_DATE)
+                show(this@CrimeFragment.getParentFragmentManager(), DIALOG_DATE)
+            }
+        }
     }
 
     /**
@@ -141,6 +151,15 @@ class CrimeFragment private constructor() : Fragment() {
     override fun onStop() {
         super.onStop()
         crimeDetailViewModel.saveCrime(crime)
+    }
+
+    /**
+     * Implementation of the DatePickerFragment.Callbacks interface.
+     * This is called by the DatePickerFragment when the user changes the date.
+     */
+    override fun onDateSelected(date: Date) {
+        crime.date = date
+        updateUI()
     }
 
     /**
