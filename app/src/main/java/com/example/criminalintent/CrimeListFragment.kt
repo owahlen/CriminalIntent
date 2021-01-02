@@ -1,6 +1,5 @@
 package com.example.criminalintent
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -11,29 +10,19 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import java.util.*
+import com.example.criminalintent.databinding.FragmentCrimeListBinding
 
-class CrimeListFragment private constructor() : Fragment() {
+class CrimeListFragment : Fragment() {
 
     // TAG for logging
     private val TAG = javaClass.simpleName
 
-    // Interface to be implemented by any hosting activity (e.g. MainActivity).
-    // Its implementation enforces that MainActivity implements a behavior for
-    // the case when a Crime is selected in the list.
-    interface Callbacks {
-        fun onCrimeSelected(crimeId: UUID)
-    }
-
-    // callbacks is set/unset in onAttach()/onDetach() of this CrimeListFragment()
-    // to the hosting MainActivity.
-    private var callbacks: Callbacks? = null
-
-    // Reference to the crimeRecyclerView that is part of the fragment_crime_list.xml
-    // The RecyclerView provides a limited window into a large data set.
-    private lateinit var crimeRecyclerView: RecyclerView
+    // binding object to fragment_crime.xml
+    private var _binding: FragmentCrimeListBinding? = null
+    private val binding get() = _binding!!
 
     // Reference to the CrimeAdapter inner class
     private var adapter: CrimeAdapter = CrimeAdapter(emptyList())
@@ -46,16 +35,6 @@ class CrimeListFragment private constructor() : Fragment() {
     }
 
     /**
-     * Called when the fragment is first attached to the MainActivity.
-     * Since CrimeListFragment is hosted in an activity, the Context parameter
-     * is the activity instance hosting the fragment.
-     */
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        callbacks = context as Callbacks?
-    }
-
-    /**
      * Called to have the fragment instantiate its user interface view. This will be called between
      * {@link #onCreate(Bundle)} and
      * {@link #onActivityCreated(Bundle)}.
@@ -64,17 +43,15 @@ class CrimeListFragment private constructor() : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         // inflate fragment_crime_list.xml into the fragment_container of the MainActivity
-        val view = inflater.inflate(R.layout.fragment_crime_list, container, false)
-
+        _binding = FragmentCrimeListBinding.inflate(inflater, container, false)
         // retrieve the RecyclerView from the inflated fragment_crime_list.xml
         // and configure it's LayoutManager which by default arranges items vertically
-        crimeRecyclerView = view.findViewById(R.id.crime_recycler_view) as RecyclerView
-        crimeRecyclerView.layoutManager = LinearLayoutManager(context)
-        crimeRecyclerView.adapter = adapter
+        binding.crimeRecyclerView.layoutManager = LinearLayoutManager(context)
+        binding.crimeRecyclerView.adapter = adapter
 
-        return view
+        return binding.root
     }
 
     /**
@@ -99,11 +76,17 @@ class CrimeListFragment private constructor() : Fragment() {
     }
 
     /**
-     * Called when the fragment is no longer attached to the MainActivity.
+     * Called when the view previously created by {@link #onCreateView} has
+     * been detached from the fragment.  The next time the fragment needs
+     * to be displayed, a new view will be created.  This is called
+     * after {@link #onStop()} and before {@link #onDestroy()}.  It is called
+     * <em>regardless</em> of whether {@link #onCreateView} returned a
+     * non-null view.  Internally it is called after the view's state has
+     * been saved but before it has been removed from its parent.
      */
-    override fun onDetach() {
-        super.onDetach()
-        callbacks = null
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     /**
@@ -113,7 +96,7 @@ class CrimeListFragment private constructor() : Fragment() {
      */
     private fun updateUI(crimes: List<Crime>) {
         adapter = CrimeAdapter(crimes)
-        crimeRecyclerView.adapter = adapter
+        binding.crimeRecyclerView.adapter = adapter
     }
 
     /**
@@ -151,8 +134,8 @@ class CrimeListFragment private constructor() : Fragment() {
         }
 
         override fun onClick(v: View?) {
-            // call onCrimeSelected() in the hosting MainActivity
-            callbacks?.onCrimeSelected(crime.id)
+            val action = CrimeListFragmentDirections.actionCrimeListToCrime(crime.id)
+            findNavController().navigate(action)
         }
     }
 
@@ -189,12 +172,4 @@ class CrimeListFragment private constructor() : Fragment() {
         }
     }
 
-    companion object {
-        /**
-         * Factory method of the CrimeListFragment
-         */
-        fun newInstance(): CrimeListFragment {
-            return CrimeListFragment()
-        }
-    }
 }

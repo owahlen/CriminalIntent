@@ -2,40 +2,31 @@ package com.example.criminalintent
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import java.util.*
+import androidx.navigation.Navigation
+import androidx.navigation.fragment.NavHostFragment
 
-class MainActivity : AppCompatActivity(), CrimeListFragment.Callbacks {
+class MainActivity : AppCompatActivity() {
 
     // TAG for logging
     private val TAG = javaClass.simpleName
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // render activity_main
         setContentView(R.layout.activity_main)
 
-        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
-
-        // currentFragment is not null if the activity is re-created (on rotation / reclaim memory)
-        if (currentFragment == null) {
-            val fragment = CrimeListFragment.newInstance() // CrimeFragment()
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
+        // navHostFragment is not null if the activity is re-created (on reclaim memory)
+        if (navHostFragment == null) {
+            val host = NavHostFragment.create(R.navigation.nav_graph)
             supportFragmentManager
                 .beginTransaction()
-                .add(R.id.fragment_container, fragment)
+                .replace(R.id.nav_host_fragment, host)
+                .setPrimaryNavigationFragment(host)
                 .commit()
         }
     }
 
-    /**
-     * replace the CrimeListFragment currently shown in the fragment_container
-     * with a CrimeFragment detail view.
-     */
-    override fun onCrimeSelected(crimeId: UUID) {
-        val fragment = CrimeFragment.newInstance(crimeId)
-        supportFragmentManager
-            .beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .addToBackStack(null) // put the CrimeFragment on the navigation stack
-            .commit()
-    }
+    override fun onSupportNavigateUp(): Boolean = Navigation.findNavController(this, R.id.container).navigateUp()
 
 }

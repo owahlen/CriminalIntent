@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@+id/crime_list_fragment">
+
+    <fragment
+        android:id="@+id/crime_list_fragment"
+        android:name="com.example.criminalintent.CrimeListFragment"
+        android:label="fragment_crime_list"
+        tools:layout="@layout/fragment_crime_list">
+
+        <action
+            android:id="@+id/action_crime_list_to_crime"
+            app:destination="@id/crime_fragment" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/crime_fragment"
+        android:name="com.example.criminalintent.CrimeFragment"
+        android:label="fragment_crime"
+        tools:layout="@layout/fragment_crime">
+
+        <argument
+            android:name="crime_id"
+            app:argType="java.util.UUID"/>
+
+    </fragment>
+
+</navigation>

@@ -6,24 +6,24 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.EditText
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import com.example.criminalintent.databinding.FragmentCrimeBinding
 import java.util.*
 
 private const val ARG_CRIME_ID = "crime_id"
 
-class CrimeFragment private constructor() : Fragment() {
+class CrimeFragment : Fragment() {
 
     // TAG for logging
     private val TAG = javaClass.simpleName
 
     private lateinit var crime: Crime
-    private lateinit var titleField: EditText
-    private lateinit var dateButton: Button
-    private lateinit var solvedCheckBox: CheckBox
+
+    // binding object to fragment_crime.xml
+    private var _binding: FragmentCrimeBinding? = null
+    private val binding get() = _binding!!
+
     // Lazy initialization of the crimeDetailViewModel associated with this CrimeFragment
     private val crimeDetailViewModel: CrimeDetailViewModel by lazy {
         ViewModelProvider(this).get(CrimeDetailViewModel::class.java)
@@ -53,22 +53,17 @@ class CrimeFragment private constructor() : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         // inflate the fragment into the parent ViewGroup
         // but let the Activity handle adding the view later
-        val view = inflater.inflate(R.layout.fragment_crime, container, false)
+        _binding = FragmentCrimeBinding.inflate(inflater, container, false)
 
-        // wire up widgets
-        titleField = view.findViewById(R.id.crime_title) as EditText
-        dateButton = view.findViewById(R.id.crime_date) as Button
-        solvedCheckBox = view.findViewById(R.id.crime_solved) as CheckBox
-
-        dateButton.apply {
+        binding.crimeDate.apply {
             text = crime.date.toString()
             isEnabled = false
         }
 
-        return view
+        return binding.root
     }
 
     /**
@@ -124,11 +119,11 @@ class CrimeFragment private constructor() : Fragment() {
 
         // add the titleWatcher to the title field to update the crime model's title
         // in case the user enters a text into the titleField
-        titleField.addTextChangedListener(titleWatcher)
+        binding.crimeTitle.addTextChangedListener(titleWatcher)
 
         // bind the "isChecked" property of the "solvedCheckBox"
         // to the "isSolved" property of the cirme model.
-        solvedCheckBox.apply {
+        binding.crimeSolved.apply {
             setOnCheckedChangeListener { _, isChecked ->
                 crime.isSolved = isChecked
             }
@@ -144,12 +139,26 @@ class CrimeFragment private constructor() : Fragment() {
     }
 
     /**
+     * Called when the view previously created by {@link #onCreateView} has
+     * been detached from the fragment.  The next time the fragment needs
+     * to be displayed, a new view will be created.  This is called
+     * after {@link #onStop()} and before {@link #onDestroy()}.  It is called
+     * <em>regardless</em> of whether {@link #onCreateView} returned a
+     * non-null view.  Internally it is called after the view's state has
+     * been saved but before it has been removed from its parent.
+     */
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    /**
      * updateUI() is called by the Observer defined in OnViewCreated()
      */
     private fun updateUI() {
-        titleField.setText(crime.title)
-        dateButton.text = crime.date.toString()
-        solvedCheckBox.apply {
+        binding.crimeTitle.setText(crime.title)
+        binding.crimeDate.text = crime.date.toString()
+        binding.crimeSolved.apply {
             isChecked = crime.isSolved
             // Setting the checkbox is slightly delayed by LiveData fetching data from the database.
             // Nevertheless when showing this screen no animations should be shown and
@@ -158,18 +167,4 @@ class CrimeFragment private constructor() : Fragment() {
         }
     }
 
-    companion object {
-
-        /**
-         * Factory method of CrimeFragment that populates an arguments bundle
-         */
-        fun newInstance(crimeId: UUID): CrimeFragment {
-            val args = Bundle().apply {
-                putSerializable(ARG_CRIME_ID, crimeId)
-            }
-            return CrimeFragment().apply {
-                arguments = args
-            }
-        }
-    }
 }
