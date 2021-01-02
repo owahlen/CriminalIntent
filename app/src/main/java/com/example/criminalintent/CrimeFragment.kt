@@ -17,7 +17,7 @@ private const val ARG_CRIME_ID = "crime_id"
 private const val DIALOG_DATE = "DialogDate"
 private const val REQUEST_DATE = 0
 
-class CrimeFragment private constructor() : Fragment(), DatePickerFragment.Callbacks {
+class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
 
     // TAG for logging
     private val TAG = javaClass.simpleName

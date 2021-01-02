@@ -15,4 +15,9 @@ class CrimeListViewModel : ViewModel() {
     // When the CrimeListViewModel is lazily created the crimeListLiveData is observed
     // for data coming from the underlying crimeRepository and the UI is updated accordingly
     val crimeListLiveData: LiveData<List<Crime>> = crimeRepository.getCrimes()
+
+    // Synchronously store a crime to the database
+    fun addCrime(crime: Crime) {
+        crimeRepository.addCrime(crime)
+    }
 }

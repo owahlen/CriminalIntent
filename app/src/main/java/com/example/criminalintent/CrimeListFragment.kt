@@ -3,9 +3,7 @@ package com.example.criminalintent
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -15,7 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.util.*
 
-class CrimeListFragment private constructor() : Fragment() {
+class CrimeListFragment : Fragment() {
 
     // TAG for logging
     private val TAG = javaClass.simpleName
@@ -56,6 +54,17 @@ class CrimeListFragment private constructor() : Fragment() {
     }
 
     /**
+     * Called to do initial creation of a fragment.  This is called after
+     * {@link #onAttach(Activity)} and before
+     * {@link #onCreateView(LayoutInflater, ViewGroup, Bundle)}.
+     */
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Initialize the FragmentManager to call "onCreateOptionsMenu" for this Fragment
+        setHasOptionsMenu(true)
+    }
+
+    /**
      * Called to have the fragment instantiate its user interface view. This will be called between
      * {@link #onCreate(Bundle)} and
      * {@link #onActivityCreated(Bundle)}.
@@ -88,8 +97,7 @@ class CrimeListFragment private constructor() : Fragment() {
         // The LiveData instance will unregister the Observer as long as the lifetime of the
         // viewLifecycleOwner (i.e. the Fragment's view) is no longer in a valid state.
         crimeListViewModel.crimeListLiveData.observe(
-            viewLifecycleOwner,
-            Observer { crimes ->
+            viewLifecycleOwner, { crimes ->
                 crimes?.let {
                     Log.i(TAG, "Got crimes ${crimes.size}")
                     updateUI(crimes)
@@ -104,6 +112,25 @@ class CrimeListFragment private constructor() : Fragment() {
     override fun onDetach() {
         super.onDetach()
         callbacks = null
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        // populate the Menu instance with the properties defined in menu/fragment_crime_list.xml
+        super.onCreateOptionsMenu(menu, inflater)
+        inflater.inflate(R.menu.fragment_crime_list, menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.new_crime -> {
+                // the new_crime menu item has been selected
+                val crime = Crime()
+                crimeListViewModel.addCrime(crime)
+                callbacks?.onCrimeSelected(crime.id)
+                true
+            }
+            else -> return super.onOptionsItemSelected(item)
+        }
     }
 
     /**
