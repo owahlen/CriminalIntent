@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.room.Room
 import com.example.criminalintent.database.CrimeDatabase
 import com.example.criminalintent.database.migration_1_2
+import java.io.File
 import java.util.*
 import java.util.concurrent.Executors
 
@@ -30,6 +31,9 @@ class CrimeRepository private constructor(context: Context) {
     // executor for creates and updates to run in a separate thread
     private val executor = Executors.newSingleThreadExecutor()
 
+    // directory for image files
+    private val filesDir = context.applicationContext.filesDir
+
     // Repository operations
     fun getCrimes(): LiveData<List<Crime>> = crimeDao.getCrimes()
 
@@ -48,6 +52,9 @@ class CrimeRepository private constructor(context: Context) {
             crimeDao.addCrime(crime)
         }
     }
+
+    // retrieve the java.io.File associated with a crime
+    fun getPhotoFile(crime: Crime): File = File(filesDir, crime.photoFileName)
 
     // companion to instantiate this class as a singleton
     companion object {

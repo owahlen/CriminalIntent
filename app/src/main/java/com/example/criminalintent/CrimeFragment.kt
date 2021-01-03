@@ -7,23 +7,25 @@ import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Bundle
 import android.provider.ContactsContract
+import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.EditText
+import android.widget.*
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import java.io.File
 import java.util.*
 
 private const val ARG_CRIME_ID = "crime_id"
 private const val DIALOG_DATE = "DialogDate"
 private const val REQUEST_DATE = 0
 private const val REQUEST_CONTACT = 1
+private const val REQUEST_PHOTO = 2
 private const val DATE_FORMAT = "EEE, MMM, dd"
 
 class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
@@ -32,11 +34,15 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
     private val TAG = javaClass.simpleName
 
     private lateinit var crime: Crime
+    private lateinit var photoFile: File
+    private lateinit var photoUri: Uri
     private lateinit var titleField: EditText
     private lateinit var dateButton: Button
     private lateinit var solvedCheckBox: CheckBox
     private lateinit var reportButton: Button
     private lateinit var suspectButton: Button
+    private lateinit var photoButton: ImageButton
+    private lateinit var photoView: ImageView
 
     // Lazy initialization of the crimeDetailViewModel associated with this CrimeFragment
     private val crimeDetailViewModel: CrimeDetailViewModel by lazy {
@@ -78,6 +84,8 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
         solvedCheckBox = view.findViewById(R.id.crime_solved) as CheckBox
         reportButton = view.findViewById(R.id.crime_report) as Button
         suspectButton = view.findViewById(R.id.crime_suspect) as Button
+        photoButton = view.findViewById(R.id.crime_camera) as ImageButton
+        photoView = view.findViewById(R.id.crime_photo) as ImageView
 
         return view
     }
@@ -92,6 +100,15 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
             viewLifecycleOwner, { crime ->
                 crime?.let {
                     this.crime = crime
+                    // get the File object for the Crime
+                    photoFile = crimeDetailViewModel.getPhotoFile(crime)
+                    // get URI from File that is exposed to the camera app
+                    photoUri = FileProvider.getUriForFile(
+                        requireActivity(),
+                        // the authority as defined in the AndroidManifest.xml
+                        "com.example.criminalintent.fileprovider",
+                        photoFile
+                    )
                     updateUI()
                 }
             }
@@ -199,6 +216,44 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
             }
 
         }
+
+        photoButton.apply {
+            // create the Intent to capture an image by a camera app
+            val captureImage = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            // use the package manager to see if the intent would be resolved
+            // Note that in Android 11 this intent must be listed in the queries section
+            // of the AndroidManifest.xml
+            val packageManager: PackageManager = requireActivity().packageManager
+            val resolveActivity: ResolveInfo? = packageManager.resolveActivity(
+                captureImage,
+                PackageManager.MATCH_DEFAULT_ONLY
+            )
+            if (resolveActivity == null) {
+                isEnabled = false
+            }
+
+            setOnClickListener {
+                // add the photoUri to the intent: This URI represents a java.io.File
+                // to which the camera app will write the image
+                captureImage.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+
+                // query the activites this intent might trigger
+                val cameraActivities: List<ResolveInfo> = packageManager.queryIntentActivities(
+                    captureImage, PackageManager.MATCH_DEFAULT_ONLY
+                )
+
+                // grant the camera app(s) the permission to write to the photoFile
+                for (cameraActivity in cameraActivities) {
+                    requireActivity().grantUriPermission(
+                        // use the cameraActivitie's package name to give write access
+                        cameraActivity.activityInfo.packageName,
+                        photoUri,
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                }
+                startActivityForResult(captureImage, REQUEST_PHOTO)
+            }
+        }
     }
 
     /**
@@ -207,6 +262,19 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
     override fun onStop() {
         super.onStop()
         crimeDetailViewModel.saveCrime(crime)
+    }
+
+    /**
+     * Called when the fragment is no longer attached to its activity.  This
+     * is called after {@link #onDestroy()}.
+     */
+    override fun onDetach() {
+        super.onDetach()
+        // revoke any permission to write to the photoUri
+        requireActivity().revokeUriPermission(
+            photoUri,
+            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        )
     }
 
     /**
@@ -234,18 +302,35 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
         if (crime.suspect.isNotEmpty()) {
             suspectButton.text = crime.suspect
         }
+        updatePhotoView()
+    }
+
+    /**
+     * If there is a photoFile scale it to the display of the Activity of this Fragment
+     * and place it into the photoView
+     */
+    private fun updatePhotoView() {
+        if (photoFile.exists()) {
+            val bitmap = getScaledBitmap(photoFile.path, requireActivity())
+            photoView.setImageBitmap(bitmap)
+        } else {
+            // show a cleared ImageDrawable
+            photoView.setImageDrawable(null)
+        }
     }
 
     /**
      * Receive the result from a previous call to
      * {@link #startActivityForResult(Intent, int)}.
-     * This method was called by the suspectButton and has triggered a selection of a contact.
-     * This contact is now received, here.
+     * This method is called when a contact has been selected in a contact app
+     * after pushing the suspectButton or when a camera app has written a picture to the photoUri
+     * after pushing the photoButton .
      */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when {
             resultCode != Activity.RESULT_OK -> return
 
+            // a contact has been selected
             requestCode == REQUEST_CONTACT -> {
                 val contactUri: Uri = data?.data ?: return
                 // Specify which fields you want your query to return values for
@@ -267,6 +352,16 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
                     crimeDetailViewModel.saveCrime(crime)
                     suspectButton.text = suspect
                 }
+            }
+
+            // a photo has been taken
+            requestCode == REQUEST_PHOTO -> {
+                // revoke all write permissions from other apps to this photoUri
+                requireActivity().revokeUriPermission(
+                    photoUri,
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                updatePhotoView()
             }
         }
     }
